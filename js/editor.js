@@ -22,7 +22,7 @@ const state = {
   texts: [],
   activeText: null,
   frame: { width: 0, radius: 0, color: "#ffffff", pad: 0 },
-  drawTool: { mode: "brush", size: 12, opacity: 100, color: "#f0b35b" },
+  drawTool: { mode: "brush", size: 12, opacity: 100, color: "#3b82f6" },
   tool: "adjust",
   fileName: "anuki-photo",
   photoId: null,
@@ -435,7 +435,7 @@ function drawOverlay() {
       octx.save();
       octx.translate(b.x + b.w / 2 + padPx, b.y + b.h / 2 + padPx);
       octx.rotate((t.rot || 0) * Math.PI / 180);
-      octx.strokeStyle = "#f0b35b"; octx.lineWidth = 1.5; octx.setLineDash([5, 4]);
+      octx.strokeStyle = "#3b82f6"; octx.lineWidth = 1.5; octx.setLineDash([5, 4]);
       octx.strokeRect(-b.w / 2 - 6, -b.h / 2 - 4, b.w + 12, b.h + 8);
       octx.restore();
     }
@@ -450,7 +450,7 @@ function drawOverlay() {
       octx.beginPath(); octx.moveTo(crop.x + crop.w * i / 3, crop.y); octx.lineTo(crop.x + crop.w * i / 3, crop.y + crop.h); octx.stroke();
       octx.beginPath(); octx.moveTo(crop.x, crop.y + crop.h * i / 3); octx.lineTo(crop.x + crop.w, crop.y + crop.h * i / 3); octx.stroke();
     }
-    octx.fillStyle = "#f0b35b";
+    octx.fillStyle = "#3b82f6";
     for (const [hx, hy] of cropHandles()) octx.fillRect(hx - 6, hy - 6, 12, 12);
     const rw = Math.round(crop.w / previewScale), rh = Math.round(crop.h / previewScale);
     $("#crop-info").textContent = `${rw} × ${rh} px`;
@@ -797,7 +797,7 @@ function paintMask(from, to) {
 /* =====================================================================
    Draw
    ===================================================================== */
-const SWATCHES = ["#ffffff", "#000000", "#f0b35b", "#e5584f", "#4fbf8a", "#4f8fe5", "#e54fb3", "#ffe14f"];
+const SWATCHES = ["#ffffff", "#000000", "#3b82f6", "#e5584f", "#4fbf8a", "#4f8fe5", "#e54fb3", "#ffe14f"];
 const swEl = $("#d-swatches");
 SWATCHES.forEach(c => {
   const s = document.createElement("div"); s.className = "swatch"; s.style.background = c;
