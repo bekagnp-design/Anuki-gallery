@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anuki Gallery — რედაქტორი</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Georgian:wght@400;600;700;900&family=Noto+Serif+Georgian:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23f0b35b'/%3E%3Ctext x='16' y='23' font-size='18' text-anchor='middle' font-weight='900' fill='%231a1205'%3EA%3C/text%3E%3C/svg%3E">
+</head>
+<body class="editor-body">
+  <header class="topbar">
+    <a class="brand" href="index.html"><span class="logo">A</span> Anuki Gallery</a>
+    <nav class="nav">
+      <a href="index.html">ალბომები</a>
+      <a href="editor.html" class="active">რედაქტორი</a>
+      <a href="tutorial.html">ტუტორიალი</a>
+    </nav>
+  </header>
+
+  <div class="editor-top">
+    <button class="btn sm" id="btn-open">📂 გახსნა</button>
+    <input type="file" id="file-input" accept="image/*" hidden>
+    <span class="fname" id="fname">ფოტო არ არის არჩეული</span>
+    <span class="info" id="info"></span>
+    <span class="spacer"></span>
+    <button class="btn sm" id="btn-undo" title="უკან (Ctrl+Z)">↶ უკან</button>
+    <button class="btn sm" id="btn-redo" title="წინ (Ctrl+Shift+Z)">↷ წინ</button>
+    <button class="btn sm" id="btn-compare" title="დააჭირე და გეჭიროს ორიგინალის სანახავად">👁 ორიგინალი</button>
+    <button class="btn sm danger" id="btn-reset">↺ ყველაფრის გაუქმება</button>
+    <button class="btn sm primary" id="btn-export-top">⬇ ექსპორტი</button>
+  </div>
+
+  <div class="editor">
+    <!-- Tools -->
+    <aside class="tools" id="tools">
+      <button class="tool active" data-tool="adjust" title="სინათლე და ფერი">☀️<span class="lbl">სინათლე</span></button>
+      <button class="tool" data-tool="color" title="ფერი">🎨<span class="lbl">ფერი</span></button>
+      <button class="tool" data-tool="filters" title="ფილტრები">✨<span class="lbl">ფილტრი</span></button>
+      <button class="tool" data-tool="effects" title="ეფექტები">🌫️<span class="lbl">ეფექტი</span></button>
+      <hr>
+      <button class="tool" data-tool="crop" title="კადრირება">⛶<span class="lbl">კადრი</span></button>
+      <button class="tool" data-tool="resize" title="ზომის შეცვლა">⤢<span class="lbl">ზომა</span></button>
+      <button class="tool" data-tool="transform" title="მობრუნება">🔄<span class="lbl">ბრუნვა</span></button>
+      <hr>
+      <button class="tool" data-tool="bgblur" title="ფონის დაბლარვა">🫧<span class="lbl">ფონი</span></button>
+      <button class="tool" data-tool="text" title="ტექსტი">T<span class="lbl">ტექსტი</span></button>
+      <button class="tool" data-tool="draw" title="ხატვა">🖌️<span class="lbl">ხატვა</span></button>
+      <button class="tool" data-tool="frame" title="ჩარჩო">🖼️<span class="lbl">ჩარჩო</span></button>
+      <hr>
+      <button class="tool" data-tool="export" title="ექსპორტი">💾<span class="lbl">შენახვა</span></button>
+    </aside>
+
+    <!-- Stage -->
+    <main class="stage" id="stage">
+      <div class="drop-empty" id="drop-empty">
+        <div class="big">🖼️</div>
+        <p>ჩააგდე ფოტო აქ, ან <button class="btn sm" id="btn-open-2">აირჩიე ფაილი</button></p>
+        <p class="note">ან გახსენი <a href="index.html">ალბომიდან</a></p>
+      </div>
+      <canvas id="preview" style="display:none"></canvas>
+      <canvas id="overlay"></canvas>
+      <div class="hint" id="hint" style="display:none"></div>
+    </main>
+
+    <!-- Panel -->
+    <aside class="panel" id="panel">
+
+      <section data-panel="adjust" class="active">
+        <h4>სინათლე</h4>
+        <div class="ctl"><div class="lbl">სიკაშკაშე <b data-val="brightness">0</b></div><input type="range" data-param="brightness" min="-100" max="100" value="0"></div>
+        <div class="ctl"><div class="lbl">ექსპოზიცია <b data-val="exposure">0</b></div><input type="range" data-param="exposure" min="-100" max="100" value="0"></div>
+        <div class="ctl"><div class="lbl">კონტრასტი <b data-val="contrast">0</b></div><input type="range" data-param="contrast" min="-100" max="100" value="0"></div>
+        <div class="ctl"><div class="lbl">ნათელი ადგილები <b data-val="highlights">0</b></div><input type="range" data-param="highlights" min="-100" max="100" value="0"></div>
+        <div class="ctl"><div class="lbl">ჩრდილები <b data-val="shadows">0</b></div><input type="range" data-param="shadows" min="-100" max="100" value="0"></div>
+        <div class="ctl"><div class="lbl">სიმკვეთრე <b data-val="sharpen">0</b></div><input type="range" data-param="sharpen" min="0" max="100" value="0"></div>
+        <button class="btn sm" data-reset-group="brightness,exposure,contrast,highlights,shadows,sharpen">სინათლის განულება</button>
+      </section>
+
+      <section data-panel="color">
+        <h4>ფერი</h4>
+        <div class="ctl"><div class="lbl">ტემპერატურა <b data-val="temperature">0</b></div><input type="range" data-param="temperature" min="-100" max="100" value="0"></div>
+        <div class="ctl"><div class="lbl">ტონი (მწვანე ↔ ვარდისფერი) <b data-val="tint">0</b></div><input type="range" data-param="tint" min="-100" max="100" value="0"></div>
+        <div class="ctl"><div class="lbl">სატურაცია <b data-val="saturation">0</b></div><input type="range" data-param="saturation" min="-100" max="100" value="0"></div>
+        <div class="ctl"><div class="lbl">ვიბრანსი <b data-val="vibrance">0</b></div><input type="range" data-param="vibrance" min="-100" max="100" value="0"></div>
+        <div class="ctl"><div class="lbl">ფერის ტონი (Hue) <b data-val="hue">0</b></div><input type="range" data-param="hue" min="-180" max="180" value="0"></div>
+        <div class="ctl"><div class="lbl">შავ-თეთრი <b data-val="grayscale">0</b></div><input type="range" data-param="grayscale" min="0" max="100" value="0"></div>
+        <div class="ctl"><div class="lbl">სეპია <b data-val="sepia">0</b></div><input type="range" data-param="sepia" min="0" max="100" value="0"></div>
+        <button class="btn sm" data-reset-group="temperature,tint,saturation,vibrance,hue,grayscale,sepia">ფერის განულება</button>
+      </section>
+
+      <section data-panel="filters">
+        <h4>ფილტრები (პრესეტები)</h4>
+        <div class="presets" id="presets"></div>
+        <p class="note">პრესეტი ცვლის სლაიდერებს „სინათლე“ და „ფერი“ პანელებზე — შემდეგ შეგიძლია ხელით დაასწორო.</p>
+      </section>
+
+      <section data-panel="effects">
+        <h4>ეფექტები</h4>
+        <div class="ctl"><div class="lbl">ვინიეტი <b data-val="vignette">0</b></div><input type="range" data-param="vignette" min="0" max="100" value="0"></div>
+        <div class="ctl"><div class="lbl">მარცვლოვანება (Grain) <b data-val="grain">0</b></div><input type="range" data-param="grain" min="0" max="100" value="0"></div>
+        <div class="ctl"><div class="lbl">ფეიდი (ფილმის ეფექტი) <b data-val="fade">0</b></div><input type="range" data-param="fade" min="0" max="100" value="0"></div>
+        <div class="ctl"><div class="lbl">სრული ბლარი <b data-val="blur">0</b></div><input type="range" data-param="blur" min="0" max="50" value="0"></div>
+        <div class="ctl"><div class="lbl">ინვერსია <b data-val="invert">0</b></div><input type="range" data-param="invert" min="0" max="100" value="0"></div>
+        <button class="btn sm" data-reset-group="vignette,grain,fade,blur,invert">ეფექტების განულება</button>
+      </section>
+
+      <section data-panel="crop">
+        <h4>კადრირება</h4>
+        <p class="note">გადაათრიე ჩარჩო ან მისი კუთხეები სურათზე.</p>
+        <div class="presets" id="crop-presets">
+          <button class="btn sm" data-ratio="free">თავისუფალი</button>
+          <button class="btn sm" data-ratio="1">1:1</button>
+          <button class="btn sm" data-ratio="1.3333">4:3</button>
+          <button class="btn sm" data-ratio="1.5">3:2</button>
+          <button class="btn sm" data-ratio="1.7778">16:9</button>
+          <button class="btn sm" data-ratio="0.8">4:5 (Insta)</button>
+          <button class="btn sm" data-ratio="0.5625">9:16 (Story)</button>
+          <button class="btn sm" data-ratio="0.7071">A4</button>
+          <button class="btn sm" data-ratio="orig">ორიგინალი</button>
+        </div>
+        <div class="note" id="crop-info"></div>
+        <div class="two">
+          <button class="btn" id="crop-cancel">გაუქმება</button>
+          <button class="btn primary" id="crop-apply">კადრირება ✓</button>
+        </div>
+      </section>
+
+      <section data-panel="resize">
+        <h4>ზომის შეცვლა</h4>
+        <div class="two">
+          <div class="ctl"><div class="lbl">სიგანე (px)</div><input type="number" id="rs-w" min="1"></div>
+          <div class="ctl"><div class="lbl">სიმაღლე (px)</div><input type="number" id="rs-h" min="1"></div>
+        </div>
+        <label class="row" style="font-size:13px"><input type="checkbox" id="rs-lock" checked> პროპორციის შენარჩუნება</label>
+        <div class="presets">
+          <button class="btn sm" data-scale="0.75">75%</button>
+          <button class="btn sm" data-scale="0.5">50%</button>
+          <button class="btn sm" data-scale="0.25">25%</button>
+          <button class="btn sm" data-width="1920">1920</button>
+          <button class="btn sm" data-width="1080">1080</button>
+          <button class="btn sm" data-width="800">800</button>
+        </div>
+        <div class="note" id="rs-info"></div>
+        <button class="btn primary" id="rs-apply">ზომის შეცვლა ✓</button>
+      </section>
+
+      <section data-panel="transform">
+        <h4>მობრუნება და არეკვლა</h4>
+        <div class="two">
+          <button class="btn" data-rot="-90">↺ 90° მარცხნივ</button>
+          <button class="btn" data-rot="90">↻ 90° მარჯვნივ</button>
+          <button class="btn" data-flip="h">⇋ ჰორიზონტალურად</button>
+          <button class="btn" data-flip="v">⇅ ვერტიკალურად</button>
+        </div>
+        <h4>გასწორება (ჰორიზონტი)</h4>
+        <div class="ctl"><div class="lbl">კუთხე <b id="straighten-val">0°</b></div><input type="range" id="straighten" min="-30" max="30" step="0.5" value="0"></div>
+        <button class="btn primary" id="straighten-apply">გასწორება ✓</button>
+      </section>
+
+      <section data-panel="bgblur">
+        <h4>ფონის დაბლარვა (პორტრეტის რეჟიმი)</h4>
+        <label class="row" style="font-size:13px"><input type="checkbox" id="bg-enabled"> ჩართვა</label>
+        <div class="ctl"><div class="lbl">ბლარის სიძლიერე <b id="bg-radius-val">12</b></div><input type="range" id="bg-radius" min="1" max="60" value="12"></div>
+        <div class="ctl"><div class="lbl">კიდის სირბილე <b id="bg-feather-val">20</b></div><input type="range" id="bg-feather" min="0" max="100" value="20"></div>
+        <h4>რა დარჩეს მკვეთრი?</h4>
+        <div class="presets">
+          <button class="btn sm active" data-bgmode="paint">🖌 ფუნჯი</button>
+          <button class="btn sm" data-bgmode="erase">◻ საშლელი</button>
+          <button class="btn sm" data-bgmode="radial">◯ ოვალი</button>
+        </div>
+        <div class="ctl" id="bg-brush-ctl"><div class="lbl">ფუნჯის ზომა <b id="bg-brush-val">60</b></div><input type="range" id="bg-brush" min="5" max="300" value="60"></div>
+        <div id="bg-radial-ctl" style="display:none">
+          <div class="ctl"><div class="lbl">ოვალის სიგანე <b id="bg-rx-val">40</b>%</div><input type="range" id="bg-rx" min="5" max="100" value="40"></div>
+          <div class="ctl"><div class="lbl">ოვალის სიმაღლე <b id="bg-ry-val">55</b>%</div><input type="range" id="bg-ry" min="5" max="100" value="55"></div>
+          <p class="note">დააწკაპუნე სურათზე ოვალის ცენტრის ასარჩევად.</p>
+        </div>
+        <div class="two">
+          <button class="btn sm" id="bg-invert">მასკის ინვერსია</button>
+          <button class="btn sm" id="bg-clear">მასკის გასუფთავება</button>
+        </div>
+        <label class="row" style="font-size:13px"><input type="checkbox" id="bg-showmask" checked> მასკის ჩვენება (წითლად)</label>
+        <p class="note">ფუნჯით შეღებე ის, რაც მკვეთრი უნდა დარჩეს (მაგ. ადამიანი). დანარჩენი დაიბლარება.</p>
+      </section>
+
+      <section data-panel="text">
+        <h4>ტექსტი</h4>
+        <button class="btn primary" id="text-add">＋ ტექსტის დამატება</button>
+        <div class="text-list" id="text-list"></div>
+        <div id="text-props" style="display:none; flex-direction:column; gap:10px">
+          <div class="ctl"><div class="lbl">ტექსტი</div><textarea id="t-text" rows="2"></textarea></div>
+          <div class="two">
+            <div class="ctl"><div class="lbl">შრიფტი</div>
+              <select id="t-font">
+                <option value="'Noto Sans Georgian', sans-serif">Noto Sans</option>
+                <option value="'Noto Serif Georgian', serif">Noto Serif</option>
+                <option value="Impact, 'Noto Sans Georgian', sans-serif">Impact</option>
+                <option value="Georgia, 'Noto Serif Georgian', serif">Georgia</option>
+                <option value="'Courier New', monospace">Courier</option>
+              </select>
+            </div>
+            <div class="ctl"><div class="lbl">ფერი</div><input type="color" id="t-color" value="#ffffff"></div>
+          </div>
+          <div class="ctl"><div class="lbl">ზომა <b id="t-size-val">48</b></div><input type="range" id="t-size" min="8" max="400" value="48"></div>
+          <div class="ctl"><div class="lbl">გამჭვირვალობა <b id="t-opacity-val">100</b></div><input type="range" id="t-opacity" min="5" max="100" value="100"></div>
+          <div class="ctl"><div class="lbl">მობრუნება <b id="t-rot-val">0°</b></div><input type="range" id="t-rot" min="-180" max="180" value="0"></div>
+          <div class="row" style="font-size:13px; gap:14px">
+            <label><input type="checkbox" id="t-bold" checked> მუქი</label>
+            <label><input type="checkbox" id="t-italic"> დახრილი</label>
+            <label><input type="checkbox" id="t-shadow" checked> ჩრდილი</label>
+            <label><input type="checkbox" id="t-outline"> კონტური</label>
+          </div>
+          <button class="btn danger sm" id="text-delete">ტექსტის წაშლა</button>
+        </div>
+        <p class="note">გადაათრიე ტექსტი სურათზე მაუსით.</p>
+      </section>
+
+      <section data-panel="draw">
+        <h4>ხატვა</h4>
+        <div class="presets">
+          <button class="btn sm active" data-drawmode="brush">🖌 ფუნჯი</button>
+          <button class="btn sm" data-drawmode="marker">🖍 მარკერი</button>
+          <button class="btn sm" data-drawmode="eraser">◻ საშლელი</button>
+        </div>
+        <div class="ctl"><div class="lbl">ზომა <b id="d-size-val">12</b></div><input type="range" id="d-size" min="1" max="200" value="12"></div>
+        <div class="ctl"><div class="lbl">გამჭვირვალობა <b id="d-opacity-val">100</b></div><input type="range" id="d-opacity" min="5" max="100" value="100"></div>
+        <div class="row"><input type="color" id="d-color" value="#f0b35b"><div class="swatches" id="d-swatches"></div></div>
+        <button class="btn sm" id="d-clear">ყველა მონახაზის წაშლა</button>
+      </section>
+
+      <section data-panel="frame">
+        <h4>ჩარჩო</h4>
+        <div class="ctl"><div class="lbl">სისქე <b id="f-width-val">0</b></div><input type="range" id="f-width" min="0" max="200" value="0"></div>
+        <div class="ctl"><div class="lbl">მომრგვალება <b id="f-radius-val">0</b></div><input type="range" id="f-radius" min="0" max="300" value="0"></div>
+        <div class="row"><span class="note">ფერი</span><input type="color" id="f-color" value="#ffffff">
+          <button class="btn sm" data-fcolor="#ffffff">თეთრი</button>
+          <button class="btn sm" data-fcolor="#000000">შავი</button>
+        </div>
+        <h4>კანვასის გაფართოება (Padding)</h4>
+        <div class="ctl"><div class="lbl">ზღვარი <b id="f-pad-val">0</b></div><input type="range" id="f-pad" min="0" max="400" value="0"></div>
+        <p class="note">ზღვარი ჩარჩოს ფერით შეივსება — სასურველია ინსტაგრამისთვის კვადრატულ ფონზე.</p>
+      </section>
+
+      <section data-panel="export">
+        <h4>ექსპორტი</h4>
+        <div class="two">
+          <div class="ctl"><div class="lbl">ფორმატი</div>
+            <select id="ex-format">
+              <option value="image/jpeg">JPEG</option>
+              <option value="image/png">PNG</option>
+              <option value="image/webp">WebP</option>
+            </select>
+          </div>
+          <div class="ctl"><div class="lbl">ხარისხი <b id="ex-q-val">92</b></div><input type="range" id="ex-q" min="30" max="100" value="92"></div>
+        </div>
+        <div class="ctl"><div class="lbl">ფაილის სახელი</div><input type="text" id="ex-name" value="anuki-photo"></div>
+        <div class="note" id="ex-info"></div>
+        <button class="btn primary" id="ex-download">⬇ ჩამოტვირთვა</button>
+        <h4>ალბომში შენახვა</h4>
+        <div class="ctl" id="ex-album-ctl"><div class="lbl">ალბომი</div><select id="ex-album"></select></div>
+        <div class="two">
+          <button class="btn" id="ex-save-copy">ასლად შენახვა</button>
+          <button class="btn" id="ex-save-over" disabled>გადაწერა</button>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <script type="module" src="js/editor.js"></script>
+</body>
+</html>
