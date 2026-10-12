@@ -146,3 +146,74 @@ export function fmtBytes(n) {
   if (n < 1024 * 1024) return (n / 1024).toFixed(0) + " KB";
   return (n / 1024 / 1024).toFixed(1) + " MB";
 }
+
+/* ---------- Extra DB helpers (favorites, move, bulk delete) ---------- */
+DB.updatePhotoMeta = async function (id, patch) {
+  const db = await openDB();
+  const photo = await tx(db, "photos", "readonly", s => s.get(id));
+  if (!photo) return null;
+  Object.assign(photo, patch);
+  await tx(db, "photos", "readwrite", s => s.put(photo));
+  return photo;
+};
+DB.movePhotos = async function (ids, albumId) {
+  for (const id of ids) await DB.updatePhotoMeta(id, { albumId });
+};
+DB.deletePhotos = async function (ids) {
+  const db = await openDB();
+  await tx(db, "photos", "readwrite", s => { ids.forEach(id => s.delete(id)); });
+};
+
+/* ---------- In-page dialogs (browser confirm/prompt are blocked in embedded views) ---------- */
+function dialog(build) {
+  return new Promise(resolve => {
+    const bg = document.createElement("div");
+    bg.className = "modal-bg open";
+    const box = document.createElement("div");
+    box.className = "modal";
+    bg.appendChild(box);
+    document.body.appendChild(bg);
+    const close = v => { bg.remove(); document.removeEventListener("keydown", onKey, true); resolve(v); };
+    const onKey = e => { if (e.key === "Escape") close(null); };
+    document.addEventListener("keydown", onKey, true);
+    bg.addEventListener("pointerdown", e => { if (e.target === bg) close(null); });
+    build(box, close);
+  });
+}
+export function askConfirm(message, okLabel = "დიახ", danger = true) {
+  return dialog((box, close) => {
+    box.innerHTML = `<h3></h3><div class="row"><button class="btn" data-no>გაუქმება</button><button class="btn ${danger ? "danger" : "primary"}" data-yes></button></div>`;
+    box.querySelector("h3").textContent = message;
+    box.querySelector("[data-yes]").textContent = okLabel;
+    box.querySelector("[data-no]").onclick = () => close(false);
+    box.querySelector("[data-yes]").onclick = () => close(true);
+    box.querySelector("[data-yes]").focus();
+  }).then(v => v === true);
+}
+export function askText(title, value = "", okLabel = "შენახვა", placeholder = "") {
+  return dialog((box, close) => {
+    box.innerHTML = `<h3></h3><input type="text"><div class="row"><button class="btn" data-no>გაუქმება</button><button class="btn primary" data-yes></button></div>`;
+    box.querySelector("h3").textContent = title;
+    const input = box.querySelector("input");
+    input.value = value; input.placeholder = placeholder;
+    box.querySelector("[data-yes]").textContent = okLabel;
+    box.querySelector("[data-no]").onclick = () => close(null);
+    box.querySelector("[data-yes]").onclick = () => close(input.value);
+    input.addEventListener("keydown", e => { if (e.key === "Enter") close(input.value); });
+    setTimeout(() => { input.focus(); input.select(); }, 30);
+  });
+}
+export function askChoice(title, options) {
+  // options: [{id, label}] -> resolves selected id or null
+  return dialog((box, close) => {
+    box.innerHTML = `<h3></h3><div class="choice-list"></div><div class="row"><button class="btn" data-no>გაუქმება</button></div>`;
+    box.querySelector("h3").textContent = title;
+    const list = box.querySelector(".choice-list");
+    options.forEach(o => {
+      const b = document.createElement("button");
+      b.className = "btn"; b.textContent = o.label; b.onclick = () => close(o.id);
+      list.appendChild(b);
+    });
+    box.querySelector("[data-no]").onclick = () => close(null);
+  });
+}

@@ -54,29 +54,50 @@
     <div id="view-album" style="display:none">
       <div class="row" style="margin-bottom:6px">
         <a class="btn sm" href="#">← ალბომები</a>
-        <h1 id="album-title" style="margin:0 8px"></h1>
-        <button class="btn sm icon" id="btn-rename" title="გადარქმევა">✏️</button>
+        <h1 id="album-title" style="margin:0 8px;font-size:24px"></h1>
+        <button class="btn sm icon" id="btn-rename" title="გადარქმევა" aria-label="გადარქმევა">✏️</button>
         <span class="spacer"></span>
-        <button class="btn primary" id="btn-upload">⬆ ფოტოების ატვირთვა</button>
-        <button class="btn danger sm" id="btn-del-album">ალბომის წაშლა</button>
+        <button class="btn primary" id="btn-upload">⬆ ფოტოების დამატება</button>
         <input type="file" id="file-input" accept="image/*" multiple hidden>
       </div>
-      <p class="sub" id="album-sub"></p>
+      <p class="sub" id="album-sub" style="margin-bottom:10px"></p>
+      <div class="toolbar" id="toolbar">
+        <input type="text" class="search" id="search" placeholder="🔍 ძიება სახელით">
+        <div class="seg"><button id="f-all" class="active">ყველა</button><button id="f-fav">⭐ ფავორიტები</button></div>
+        <select id="sort" style="width:auto"><option value="new">ახალი ჯერ</option><option value="old">ძველი ჯერ</option><option value="name">სახელით</option></select>
+        <span class="spacer"></span>
+        <button class="btn" id="btn-select">☑ არჩევა</button>
+      </div>
       <div id="photos" class="photo-grid dropzone"></div>
+      <div style="margin-top:36px"><button class="btn danger sm" id="btn-del-album">ალბომის წაშლა</button></div>
     </div>
   </main>
 
   <footer>Anuki Gallery · ფოტოები ინახება მხოლოდ შენს ბრაუზერში (IndexedDB)</footer>
 
-  <!-- Modal -->
-  <div class="modal-bg" id="modal">
-    <div class="modal">
-      <h3 id="modal-title">ახალი ალბომი</h3>
-      <input type="text" id="modal-input" placeholder="ალბომის სახელი, მაგ. „ზაფხული 2026“">
-      <div class="row">
-        <button class="btn" id="modal-cancel">გაუქმება</button>
-        <button class="btn primary" id="modal-ok">შენახვა</button>
-      </div>
+  <div class="selbar" id="selbar">
+    <button class="btn sm icon" id="sel-close" aria-label="დახურვა">✕</button>
+    <span class="cnt" id="sel-count">0</span>
+    <button class="btn sm" id="sel-all">ყველა</button>
+    <button class="btn sm" id="sel-fav">⭐</button>
+    <button class="btn sm" id="sel-move">📁 გადატანა</button>
+    <button class="btn sm" id="sel-dl">⬇</button>
+    <button class="btn sm danger" id="sel-del">🗑</button>
+  </div>
+
+  <div class="viewer" id="viewer">
+    <img id="v-img" alt="">
+    <div class="vbar vtop">
+      <button class="hbtn" id="v-close" aria-label="დახურვა">✕</button>
+      <div class="vname" id="v-name"></div>
+      <button class="hbtn" id="v-fav" aria-label="ფავორიტი">☆</button>
+    </div>
+    <button class="vnav vprev" id="v-prev" aria-label="წინა">‹</button>
+    <button class="vnav vnext" id="v-next" aria-label="შემდეგი">›</button>
+    <div class="vbar vbottom">
+      <button class="hbtn primary" id="v-edit">✏️ რედაქტირება</button>
+      <button class="hbtn" id="v-dl" aria-label="ჩამოტვირთვა">⬇</button>
+      <button class="hbtn" id="v-del" aria-label="წაშლა">🗑</button>
     </div>
   </div>
 

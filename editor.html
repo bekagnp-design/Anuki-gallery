@@ -10,31 +10,38 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233b82f6'/%3E%3Ctext x='16' y='23' font-size='18' text-anchor='middle' font-weight='900' fill='%23ffffff'%3EA%3C/text%3E%3C/svg%3E">
 </head>
 <body class="editor-body">
-  <header class="topbar">
-    <a class="brand" href="index.html"><span class="logo">A</span> Anuki Gallery</a>
-    <nav class="nav">
-      <a href="index.html">ალბომები</a>
-      <a href="editor.html" class="active">რედაქტორი</a>
-      <a href="tutorial.html">ტუტორიალი</a>
-    </nav>
-  </header>
+  <main class="stage" id="stage">
+    <div id="view">
+      <canvas id="preview" style="display:none"></canvas>
+      <canvas id="overlay"></canvas>
+    </div>
+    <div class="drop-empty" id="drop-empty">
+      <div style="font-size:64px">🖼️</div>
+      <h2 style="margin:8px 0 4px;color:var(--text)">აირჩიე ფოტო</h2>
+      <p>ჩააგდე აქ ან გახსენი ალბომიდან</p>
+      <div class="row" style="justify-content:center;margin-top:10px">
+        <button class="btn primary" id="btn-open-2">📂 ფოტოს არჩევა</button>
+        <a class="btn" href="index.html">ალბომები</a>
+      </div>
+    </div>
+  </main>
 
-  <div class="editor-top">
-    <button class="btn sm" id="btn-open">📂 გახსნა</button>
+  <div class="hud hud-top" id="hud-top">
+    <a class="hbtn" href="index.html" title="ალბომები" aria-label="ალბომები">←</a>
+    <button class="hbtn" id="btn-open" title="ფოტოს გახსნა" aria-label="გახსნა">📂</button>
     <input type="file" id="file-input" accept="image/*" hidden>
-    <span class="fname" id="fname">ფოტო არ არის არჩეული</span>
-    <span class="info" id="info"></span>
+    <div class="hname"><span class="fname" id="fname">ფოტო არ არის არჩეული</span><span class="info" id="info"></span></div>
     <span class="spacer"></span>
-    <button class="btn sm" id="btn-undo" title="უკან (Ctrl+Z)">↶ უკან</button>
-    <button class="btn sm" id="btn-redo" title="წინ (Ctrl+Shift+Z)">↷ წინ</button>
-    <button class="btn sm" id="btn-compare" title="დააჭირე და გეჭიროს ორიგინალის სანახავად">👁 ორიგინალი</button>
-    <button class="btn sm danger" id="btn-reset">↺ ყველაფრის გაუქმება</button>
-    <button class="btn sm primary" id="btn-export-top">⬇ ექსპორტი</button>
+    <button class="hbtn" id="btn-undo" title="უკან (Ctrl+Z)" aria-label="უკან">↶</button>
+    <button class="hbtn" id="btn-redo" title="წინ" aria-label="წინ">↷</button>
+    <button class="hbtn" id="btn-compare" title="დააჭირე და გეჭიროს — ორიგინალის სანახავად" aria-label="ორიგინალი">👁</button>
+    <button class="hbtn" id="btn-reset" title="ყველაფრის გაუქმება" aria-label="გაუქმება">⟲</button>
+    <button class="hbtn primary" id="btn-export-top">⬇<span class="hide-sm">ექსპორტი</span></button>
   </div>
 
-  <div class="editor">
-    <!-- Tools -->
-    <aside class="tools" id="tools">
+  <div class="hint" id="hint" style="display:none"></div>
+
+  <aside class="tools" id="tools">
       <button class="tool active" data-tool="adjust" title="სინათლე და ფერი">☀️<span class="lbl">სინათლე</span></button>
       <button class="tool" data-tool="color" title="ფერი">🎨<span class="lbl">ფერი</span></button>
       <button class="tool" data-tool="filters" title="ფილტრები">✨<span class="lbl">ფილტრი</span></button>
@@ -52,20 +59,8 @@
       <button class="tool" data-tool="export" title="ექსპორტი">💾<span class="lbl">შენახვა</span></button>
     </aside>
 
-    <!-- Stage -->
-    <main class="stage" id="stage">
-      <div class="drop-empty" id="drop-empty">
-        <div class="big">🖼️</div>
-        <p>ჩააგდე ფოტო აქ, ან <button class="btn sm" id="btn-open-2">აირჩიე ფაილი</button></p>
-        <p class="note">ან გახსენი <a href="index.html">ალბომიდან</a></p>
-      </div>
-      <canvas id="preview" style="display:none"></canvas>
-      <canvas id="overlay"></canvas>
-      <div class="hint" id="hint" style="display:none"></div>
-    </main>
-
-    <!-- Panel -->
-    <aside class="panel" id="panel">
+  <aside class="panel" id="panel">
+    <div class="panel-head"><b id="panel-title"></b><button class="hbtn" id="panel-hide" title="დახურვა" aria-label="დახურვა">✕</button></div>
 
       <section data-panel="adjust" class="active">
         <h4>სინათლე</h4>
@@ -265,6 +260,12 @@
         </div>
       </section>
     </aside>
+
+  <div class="zoombar" id="zoombar">
+    <button class="hbtn" id="zoom-out" title="მოშორება" aria-label="მოშორება">−</button>
+    <span class="zval" id="zoom-val">100%</span>
+    <button class="hbtn" id="zoom-in" title="მიახლოება" aria-label="მიახლოება">＋</button>
+    <button class="hbtn" id="zoom-fit" title="მთელ ეკრანზე" aria-label="მთელ ეკრანზე">⤢</button>
   </div>
 
   <script type="module" src="js/editor.js"></script>
