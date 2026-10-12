@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anuki Gallery — ალბომები</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Georgian:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233b82f6'/%3E%3Ctext x='16' y='23' font-size='18' text-anchor='middle' font-weight='900' fill='%23ffffff'%3EA%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html"><span class="logo">A</span> Anuki Gallery</a>
+    <nav class="nav">
+      <a href="index.html" class="active">ალბომები</a>
+      <a href="editor.html">რედაქტორი</a>
+      <a href="tutorial.html">ტუტორიალი</a>
+    </nav>
+  </header>
+
+  <main class="page" id="app">
+    <!-- Home view -->
+    <div id="view-home">
+      <section class="hero">
+        <div>
+          <span class="eyebrow">📷 ფოტო · ალბომი · რედაქტორი</span>
+          <h1>შენი ფოტოები, შენი ალბომები, <span class="grad">შენი რედაქტორი.</span></h1>
+          <p>ატვირთე გადაღებული ფოტოები, დაალაგე ალბომებად და დაამუშავე პირდაპირ ბრაუზერში — ზომის შეცვლა, კადრირება, ფონის დაბლარვა, ფილტრები, ტექსტი და მეტი. ყველაფერი ინახება შენს მოწყობილობაზე, სერვერზე არაფერი იტვირთება.</p>
+          <div class="row">
+            <button class="btn primary" id="btn-new-album">＋ ახალი ალბომი</button>
+            <a class="btn" href="editor.html">სწრაფი რედაქტირება</a>
+            <a class="btn" href="tutorial.html">ფოტოგრაფიის გაკვეთილები</a>
+          </div>
+        </div>
+        <div class="art">📷</div>
+      </section>
+
+      <section class="features">
+        <div class="feature"><div class="ic">🗂️</div><h3>ალბომები და საქაღალდეები</h3><p>შექმენი ალბომები, ატვირთე ფოტოები drag &amp; drop-ით და დაალაგე ისე, როგორც გინდა.</p></div>
+        <div class="feature"><div class="ic">🎛️</div><h3>სრული რედაქტორი</h3><p>სიკაშკაშე, კონტრასტი, ტემპერატურა, ფონის ბლარი, კადრირება, ზომა, ტექსტი, ხატვა, ფილტრები, ვინიეტი.</p></div>
+        <div class="feature"><div class="ic">📚</div><h3>ფოტოგრაფიის ტუტორიალი</h3><p>ექსპოზიციის სამკუთხედი, კომპოზიცია, სინათლე, პორტრეტი და პეიზაჯი — ქართულად, მაგალითებით.</p></div>
+      </section>
+
+      <div class="row" style="margin-bottom:14px">
+        <h2 style="margin:0">ალბომები</h2>
+        <span class="spacer"></span>
+        <button class="btn sm" id="btn-new-album-2">＋ ახალი ალბომი</button>
+      </div>
+      <div id="albums" class="grid"></div>
+    </div>
+
+    <!-- Album view -->
+    <div id="view-album" style="display:none">
+      <div class="row" style="margin-bottom:6px">
+        <a class="btn sm" href="#">← ალბომები</a>
+        <h1 id="album-title" style="margin:0 8px"></h1>
+        <button class="btn sm icon" id="btn-rename" title="გადარქმევა">✏️</button>
+        <span class="spacer"></span>
+        <button class="btn primary" id="btn-upload">⬆ ფოტოების ატვირთვა</button>
+        <button class="btn danger sm" id="btn-del-album">ალბომის წაშლა</button>
+        <input type="file" id="file-input" accept="image/*" multiple hidden>
+      </div>
+      <p class="sub" id="album-sub"></p>
+      <div id="photos" class="photo-grid dropzone"></div>
+    </div>
+  </main>
+
+  <footer>Anuki Gallery · ფოტოები ინახება მხოლოდ შენს ბრაუზერში (IndexedDB)</footer>
+
+  <!-- Modal -->
+  <div class="modal-bg" id="modal">
+    <div class="modal">
+      <h3 id="modal-title">ახალი ალბომი</h3>
+      <input type="text" id="modal-input" placeholder="ალბომის სახელი, მაგ. „ზაფხული 2026“">
+      <div class="row">
+        <button class="btn" id="modal-cancel">გაუქმება</button>
+        <button class="btn primary" id="modal-ok">შენახვა</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/albums.js"></script>
+</body>
+</html>
