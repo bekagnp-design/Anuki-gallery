@@ -217,3 +217,15 @@ export function askChoice(title, options) {
     box.querySelector("[data-no]").onclick = () => close(null);
   });
 }
+
+// Shows a finished photo so it can be saved with long-press / right-click when direct downloads are blocked.
+export function showSaveDialog(blob, name) {
+  return dialog((box, close) => {
+    const u = URL.createObjectURL(blob);
+    box.style.width = "min(560px, 94vw)";
+    box.innerHTML = `<h3>ფოტო მზადაა</h3><img alt="" style="width:100%;max-height:55vh;object-fit:contain;border-radius:10px;background:#000"><p class="note" style="color:var(--muted);font-size:13px;margin:10px 0 0">შესანახად დააჭირე ფოტოს <b>დიდხანს</b> (ტელეფონზე) ან <b>მარჯვენა ღილაკით</b> (კომპიუტერზე) და აირჩიე „შენახვა“. ${fmtBytes(blob.size)}</p><div class="row"><button class="btn" data-dl>⬇ ჩამოტვირთვა</button><button class="btn primary" data-no>დახურვა</button></div>`;
+    box.querySelector("img").src = u;
+    box.querySelector("[data-dl]").onclick = () => downloadBlob(blob, name);
+    box.querySelector("[data-no]").onclick = () => { URL.revokeObjectURL(u); close(null); };
+  });
+}

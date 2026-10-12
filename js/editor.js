@@ -1,4 +1,4 @@
-import { DB, toast, downloadBlob, fmtBytes, askConfirm, askText } from "./db.js";
+import { DB, toast, downloadBlob, fmtBytes, askConfirm, askText, showSaveDialog } from "./db.js";
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -1162,7 +1162,7 @@ $("#ex-download").addEventListener("click", async () => {
   const blob = await exportBlob();
   const name = ($("#ex-name").value.trim() || "anuki-photo") + "." + extFor(blob.type);
   downloadBlob(blob, name);
-  toast(`ჩამოიტვირთა · ${fmtBytes(blob.size)}`);
+  showSaveDialog(blob, name);
 });
 async function targetAlbumId() {
   let id = $("#ex-album").value;

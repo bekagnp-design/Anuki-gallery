@@ -200,7 +200,7 @@ $("#v-close").addEventListener("click", closeViewer);
 $("#v-prev").addEventListener("click", () => step(-1));
 $("#v-next").addEventListener("click", () => step(1));
 $("#v-edit").addEventListener("click", () => { location.href = `editor.html?photo=${list[vIdx].id}`; });
-$("#v-dl").addEventListener("click", () => { const p = list[vIdx]; downloadBlob(p.blob, p.name); });
+$("#v-dl").addEventListener("click", () => { const p = list[vIdx]; downloadBlob(p.blob, p.name); toast("თუ ჩამოტვირთვა არ დაიწყო, დააჭირე ფოტოს დიდხანს და აირჩიე შენახვა", 5000); });
 $("#v-fav").addEventListener("click", async () => {
   const p = list[vIdx];
   await DB.updatePhotoMeta(p.id, { fav: !p.fav });
