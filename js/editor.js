@@ -1,4 +1,4 @@
-import { DB, toast, downloadBlob, fmtBytes } from "./db.js";
+import { DB, toast, downloadBlob, fmtBytes, askConfirm, askText, showSaveDialog } from "./db.js";
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -38,6 +38,8 @@ const overlay = $("#overlay");
 const stage = $("#stage");
 const pctx = preview.getContext("2d");
 const octx = overlay.getContext("2d");
+const view = { z: 1, x: 0, y: 0 };   // zoom + pan of the photo on screen
+const panelEl = $("#panel");
 
 /* =====================================================================
    Helpers
@@ -69,7 +71,7 @@ function restore(s) {
   state.texts = s.texts.map(t => ({ ...t }));
   state.activeText = state.texts.length ? state.texts[state.texts.length - 1].id : null;
   syncUI();
-  fitPreview();
+  fitPreview(true);
   render();
 }
 // Call BEFORE mutating. Layers that will be mutated in place must be cloned by caller.
@@ -345,31 +347,54 @@ function textBounds(t, scale) {
   return { x: t.x * scale - w / 2, y: t.y * scale - h / 2, w, h };
 }
 
-/* ---------- Preview sizing ---------- */
-let previewScale = 1;
-function fitPreview() {
+/* ---------- Preview sizing + zoom/pan ---------- */
+let previewScale = 1;   // css px per photo px when the photo fits the screen
+let renderScale = 1;    // backing-store resolution (grows when zoomed in)
+let viewSize = { w: 0, h: 0 }, lastKey = "";
+const viewEl = $("#view");
+const dpr = () => Math.min(window.devicePixelRatio || 1, 2);
+
+function applyView() {
+  viewEl.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.z})`;
+  $("#zoom-val").textContent = Math.round(view.z * 100) + "%";
+}
+function clampView() {
+  const SW = stage.clientWidth, SH = stage.clientHeight, m = 80;
+  view.x = clamp(view.x, m - viewSize.w * view.z, SW - m);
+  view.y = clamp(view.y, m - viewSize.h * view.z, SH - m);
+}
+let resTimer = 0;
+function scheduleRes() { clearTimeout(resTimer); resTimer = setTimeout(() => { if (hasImage()) render(); }, 160); }
+function resetView() {
+  view.z = 1;
+  view.x = (stage.clientWidth - viewSize.w) / 2;
+  view.y = (stage.clientHeight - viewSize.h) / 2;
+  applyView(); scheduleRes();
+}
+function zoomAt(z, cx, cy) {
+  z = clamp(z, 0.5, 12);
+  const k = z / view.z;
+  view.x = cx - (cx - view.x) * k;
+  view.y = cy - (cy - view.y) * k;
+  view.z = z;
+  clampView(); applyView(); scheduleRes();
+}
+function fitPreview(keep = false) {
   if (!hasImage()) return;
-  const rect = stage.getBoundingClientRect();
+  const SW = stage.clientWidth, SH = stage.clientHeight;
   const pad = state.frame.pad * 2;
   const bw = state.base.width + pad, bh = state.base.height + pad;
-  const maxW = rect.width - 40, maxH = rect.height - 40;
-  const s = Math.min(maxW / bw, maxH / bh, 1600 / Math.max(bw, bh), 2);
-  previewScale = s;
-  const W = Math.round(state.base.width * s), H = Math.round(state.base.height * s);
-  preview.width = W; preview.height = H;
-  const cssW = Math.round(bw * s), cssH = Math.round(bh * s);
-  preview.style.width = cssW + "px"; preview.style.height = cssH + "px";
+  previewScale = Math.min(SW / bw, SH / bh, 4);
+  const cssW = Math.round(bw * previewScale), cssH = Math.round(bh * previewScale);
+  viewSize = { w: cssW, h: cssH };
+  for (const c of [preview, overlay, viewEl]) { c.style.width = cssW + "px"; c.style.height = cssH + "px"; }
   overlay.width = cssW; overlay.height = cssH;
-  overlay.style.width = cssW + "px"; overlay.style.height = cssH + "px";
-  positionOverlay();
+  const key = bw + "x" + bh;
+  if (!keep || key !== lastKey || view.z === 1) { lastKey = key; resetView(); }
+  else { clampView(); applyView(); }
   updateInfo();
 }
-function positionOverlay() {
-  const sr = stage.getBoundingClientRect(), pr = preview.getBoundingClientRect();
-  overlay.style.left = (pr.left - sr.left) + "px";
-  overlay.style.top = (pr.top - sr.top) + "px";
-}
-window.addEventListener("resize", () => { fitPreview(); render(); });
+window.addEventListener("resize", () => fitPreview(true));
 
 let renderQueued = false;
 function render() {
@@ -377,10 +402,13 @@ function render() {
   renderQueued = true;
   requestAnimationFrame(() => {
     renderQueued = false;
-    const W = Math.round(state.base.width * previewScale), H = Math.round(state.base.height * previewScale);
+    if (!hasImage()) return;
+    const pad = state.frame.pad * 2;
+    const maxDim = Math.max(state.base.width + pad, state.base.height + pad);
+    renderScale = Math.max(0.02, Math.min(previewScale * Math.max(1, view.z) * dpr(), 2600 / maxDim, 1));
+    const W = Math.max(1, Math.round(state.base.width * renderScale));
+    const H = Math.max(1, Math.round(state.base.height * renderScale));
     renderTo(preview, W, H, { original: state.compare });
-    // keep CSS size in sync when padding changes canvas size
-    positionOverlay();
     drawOverlay();
   });
 }
@@ -451,7 +479,7 @@ function drawOverlay() {
       octx.beginPath(); octx.moveTo(crop.x, crop.y + crop.h * i / 3); octx.lineTo(crop.x + crop.w, crop.y + crop.h * i / 3); octx.stroke();
     }
     octx.fillStyle = "#3b82f6";
-    for (const [hx, hy] of cropHandles()) octx.fillRect(hx - 6, hy - 6, 12, 12);
+    { const hz = 16 / Math.max(view.z, 0.6); for (const [hx, hy] of cropHandles()) octx.fillRect(hx - hz / 2, hy - hz / 2, hz, hz); }
     const rw = Math.round(crop.w / previewScale), rh = Math.round(crop.h / previewScale);
     $("#crop-info").textContent = `${rw} × ${rh} px`;
   }
@@ -470,7 +498,8 @@ function setTool(name) {
   $$("#tools .tool").forEach(b => b.classList.toggle("active", b.dataset.tool === name));
   $$("#panel section").forEach(s => s.classList.toggle("active", s.dataset.panel === name));
   const interactive = ["crop", "bgblur", "text", "draw"].includes(name);
-  overlay.classList.toggle("interactive", interactive);
+  stage.classList.toggle("tool-cursor", ["bgblur", "draw"].includes(name));
+  $("#panel-title").textContent = $(`#tools [data-tool="${name}"]`)?.title || "";
   const hints = {
     crop: "გადაათრიე ჩარჩო ან კუთხეები · Enter — კადრირება · Esc — გაუქმება",
     bgblur: "შეღებე ის, რაც მკვეთრი უნდა დარჩეს · ჩართე „ჩართვა“ შედეგის სანახავად",
@@ -483,8 +512,17 @@ function setTool(name) {
   if (name === "export") refreshExport();
   drawOverlay();
 }
-$$("#tools .tool").forEach(b => b.addEventListener("click", () => setTool(b.dataset.tool)));
-$("#btn-export-top").addEventListener("click", () => setTool("export"));
+function openTool(name) { setTool(name); panelEl.classList.remove("collapsed"); }
+$$("#tools .tool").forEach(b => b.addEventListener("click", () => {
+  const name = b.dataset.tool;
+  if (name === state.tool && name !== "crop" && !panelEl.classList.contains("collapsed")) { panelEl.classList.add("collapsed"); return; }
+  openTool(name);
+}));
+$("#panel-hide").addEventListener("click", () => {
+  if (state.tool === "crop") { cancelCrop(); setTool("adjust"); }
+  panelEl.classList.add("collapsed");
+});
+$("#btn-export-top").addEventListener("click", () => openTool("export"));
 
 /* =====================================================================
    Sliders (params)
@@ -608,7 +646,8 @@ function applyCrop() {
 // crop pointer interaction
 function cropHit(px, py) {
   const hs = cropHandles();
-  for (let i = 0; i < hs.length; i++) if (Math.abs(hs[i][0] - px) < 12 && Math.abs(hs[i][1] - py) < 12) return i;
+  const r = 22 / Math.max(view.z, 0.6);
+  for (let i = 0; i < hs.length; i++) if (Math.abs(hs[i][0] - px) < r && Math.abs(hs[i][1] - py) < r) return i;
   if (px > crop.x && px < crop.x + crop.w && py > crop.y && py < crop.y + crop.h) return "move";
   return null;
 }
@@ -911,9 +950,14 @@ $$("[data-fcolor]").forEach(b => b.addEventListener("click", () => { state.frame
 ["#f-width", "#f-radius", "#f-pad", "#f-color"].forEach(id => $(id).addEventListener("pointerdown", () => hasImage() && pushHistory()));
 
 /* =====================================================================
-   Pointer interaction on overlay
+   Pointer interaction: tools on the photo, pan + pinch/wheel zoom
    ===================================================================== */
-let pointer = { down: false, last: null, textDrag: null };
+let pointer = { last: null, textDrag: null };
+const pts = new Map();
+let gest = null;           // {type: "pan" | "pinch" | "tool"}
+let pushedFlag = false, spaceDown = false, lastTap = 0;
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
 function toLocal(e) {
   const r = overlay.getBoundingClientRect();
   return { x: (e.clientX - r.left) * (overlay.width / r.width), y: (e.clientY - r.top) * (overlay.height / r.height) };
@@ -922,53 +966,137 @@ function toBase(p) {
   const pad = state.frame.pad * previewScale;
   return { x: (p.x - pad) / previewScale, y: (p.y - pad) / previewScale };
 }
+function inImage(e) {
+  const r = overlay.getBoundingClientRect();
+  return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+}
+const isToolActive = () => ["crop", "bgblur", "text", "draw"].includes(state.tool);
 
-overlay.addEventListener("pointerdown", e => {
-  if (!hasImage()) return;
-  overlay.setPointerCapture(e.pointerId);
-  const p = toLocal(e), b = toBase(p);
-  pointer.down = true; pointer.last = b;
+// Returns true when the tool takes this touch; false lets it pan the photo instead.
+function toolDown(p, b) {
+  pointer.last = b; pushedFlag = false;
   if (state.tool === "crop" && crop.active) {
     const hit = cropHit(p.x, p.y);
-    if (hit !== null) crop.drag = { hit, sx: p.x, sy: p.y, start: { ...crop } };
-  } else if (state.tool === "bgblur") {
+    if (hit === null) return false;
+    crop.drag = { hit, sx: p.x, sy: p.y, start: { ...crop } };
+    return true;
+  }
+  if (state.tool === "bgblur") {
+    pushHistory(); pushedFlag = true;
     if (state.bg.mode === "radial") {
-      pushHistory();
       state.bg.cx = clamp(b.x / state.base.width, 0, 1); state.bg.cy = clamp(b.y / state.base.height, 0, 1);
       applyRadialMask();
     } else {
-      pushHistory(); state.mask = cloneCanvas(state.mask);
+      state.mask = cloneCanvas(state.mask);
       paintMask(b, b); render();
     }
-  } else if (state.tool === "draw") {
-    pushHistory(); state.draw = cloneCanvas(state.draw);
-    paintDraw(b, { x: b.x + 0.01, y: b.y + 0.01 }); render();
-  } else if (state.tool === "text") {
-    const t = textHit(b.x, b.y);
-    if (t) { state.activeText = t.id; renderTextList(); pushHistory(); pointer.textDrag = { t, ox: b.x - t.x, oy: b.y - t.y }; }
-    drawOverlay();
+    return true;
   }
-});
-overlay.addEventListener("pointermove", e => {
+  if (state.tool === "draw") {
+    pushHistory(); pushedFlag = true;
+    state.draw = cloneCanvas(state.draw);
+    paintDraw(b, { x: b.x + 0.01, y: b.y + 0.01 }); render();
+    return true;
+  }
+  if (state.tool === "text") {
+    const t = textHit(b.x, b.y);
+    if (!t) return false;
+    state.activeText = t.id; renderTextList();
+    pushHistory(); pushedFlag = true;
+    pointer.textDrag = { t, ox: b.x - t.x, oy: b.y - t.y };
+    drawOverlay();
+    return true;
+  }
+  return false;
+}
+function toolMove(p, b) {
+  if (state.tool === "crop" && crop.drag) cropDragMove(p.x, p.y);
+  else if (state.tool === "bgblur" && state.bg.mode !== "radial") { paintMask(pointer.last, b); render(); }
+  else if (state.tool === "draw") { paintDraw(pointer.last, b); render(); }
+  else if (state.tool === "text" && pointer.textDrag) { const d = pointer.textDrag; d.t.x = b.x - d.ox; d.t.y = b.y - d.oy; render(); }
+  pointer.last = b;
+}
+// A second finger landed: undo whatever the first finger had started painting.
+function cancelStroke() {
+  if (gest?.type !== "tool") return;
+  if (gest.pushed && history.undo.length) { restore(history.undo.pop()); updateHistoryButtons(); }
+  crop.drag = null; pointer.textDrag = null;
+}
+function startPinch() {
+  const [a, b] = [...pts.values()];
+  gest = { type: "pinch", d: Math.max(dist(a, b), 1), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 };
+  stage.classList.add("panning");
+}
+function doPinch() {
+  const [a, b] = [...pts.values()];
+  const d = Math.max(dist(a, b), 1), cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+  view.x += cx - gest.cx; view.y += cy - gest.cy;
+  zoomAt(view.z * d / gest.d, cx, cy);
+  gest.d = d; gest.cx = cx; gest.cy = cy;
+}
+
+stage.addEventListener("pointerdown", e => {
   if (!hasImage()) return;
-  const p = toLocal(e), b = toBase(p);
+  stage.setPointerCapture(e.pointerId);
+  pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pts.size === 2) { cancelStroke(); startPinch(); return; }
+  if (pts.size > 2) return;
+  let handled = false;
+  if (isToolActive() && e.button === 0 && !spaceDown && inImage(e)) { const p = toLocal(e); handled = toolDown(p, toBase(p)); }
+  if (handled) gest = { type: "tool", pushed: pushedFlag };
+  else { gest = { type: "pan", lx: e.clientX, ly: e.clientY, moved: false }; stage.classList.add("panning"); }
+});
+stage.addEventListener("pointermove", e => {
+  if (pts.has(e.pointerId)) pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (!hasImage()) return;
+  if (gest?.type === "pinch") { if (pts.size === 2) doPinch(); return; }
+  const p = toLocal(e);
   cursorPos = p;
-  if (pointer.down) {
-    if (state.tool === "crop" && crop.drag) cropDragMove(p.x, p.y);
-    else if (state.tool === "bgblur" && state.bg.mode !== "radial") { paintMask(pointer.last, b); render(); }
-    else if (state.tool === "draw") { paintDraw(pointer.last, b); render(); }
-    else if (state.tool === "text" && pointer.textDrag) { const d = pointer.textDrag; d.t.x = b.x - d.ox; d.t.y = b.y - d.oy; render(); }
-    pointer.last = b;
+  if (gest?.type === "pan") {
+    const dx = e.clientX - gest.lx, dy = e.clientY - gest.ly;
+    if (Math.abs(dx) + Math.abs(dy) > 0) gest.moved = gest.moved || Math.abs(dx) + Math.abs(dy) > 2;
+    view.x += dx; view.y += dy; gest.lx = e.clientX; gest.ly = e.clientY;
+    clampView(); applyView();
+  } else if (gest?.type === "tool") {
+    toolMove(p, toBase(p));
   } else if (state.tool === "crop" && crop.active) {
     const hit = cropHit(p.x, p.y);
-    overlay.style.cursor = hit === "move" ? "move" : hit === null ? "default" : ([0, 4].includes(hit) ? "nwse-resize" : [2, 6].includes(hit) ? "nesw-resize" : [1, 5].includes(hit) ? "ns-resize" : "ew-resize");
+    stage.style.cursor = hit === "move" ? "move" : hit === null ? "" : ([0, 4].includes(hit) ? "nwse-resize" : [2, 6].includes(hit) ? "nesw-resize" : [1, 5].includes(hit) ? "ns-resize" : "ew-resize");
   }
   if (state.tool === "draw" || state.tool === "bgblur") drawOverlay();
 });
-const endPointer = () => { pointer.down = false; pointer.textDrag = null; crop.drag = null; };
-overlay.addEventListener("pointerup", endPointer);
-overlay.addEventListener("pointercancel", endPointer);
-overlay.addEventListener("pointerleave", () => { cursorPos = null; drawOverlay(); });
+function endPointer(e) {
+  pts.delete(e.pointerId);
+  if (gest?.type === "pinch") { if (pts.size < 2) { gest = null; stage.classList.remove("panning"); } return; }
+  if (gest?.type === "pan" && !gest.moved && e.type === "pointerup") {
+    const now = performance.now();
+    if (now - lastTap < 320) {           // double tap / double click: zoom in or back to fit
+      if (view.z > 1.05) resetView(); else zoomAt(2.5, e.clientX, e.clientY);
+      lastTap = 0;
+    } else lastTap = now;
+  }
+  gest = null; crop.drag = null; pointer.textDrag = null; pointer.last = null;
+  stage.classList.remove("panning");
+}
+stage.addEventListener("pointerup", endPointer);
+stage.addEventListener("pointercancel", endPointer);
+stage.addEventListener("pointerleave", () => { cursorPos = null; if (hasImage()) drawOverlay(); });
+stage.addEventListener("wheel", e => {
+  if (!hasImage()) return;
+  e.preventDefault();
+  zoomAt(view.z * Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0018)), e.clientX, e.clientY);
+}, { passive: false });
+$("#zoom-in").addEventListener("click", () => zoomAt(view.z * 1.3, stage.clientWidth / 2, stage.clientHeight / 2));
+$("#zoom-out").addEventListener("click", () => zoomAt(view.z / 1.3, stage.clientWidth / 2, stage.clientHeight / 2));
+$("#zoom-fit").addEventListener("click", resetView);
+document.addEventListener("keydown", e => {
+  if (e.target.matches("input, textarea, select")) return;
+  if (e.code === "Space") { spaceDown = true; e.preventDefault(); }
+  else if (e.key === "+" || e.key === "=") $("#zoom-in").click();
+  else if (e.key === "-") $("#zoom-out").click();
+  else if (e.key === "0") resetView();
+});
+document.addEventListener("keyup", e => { if (e.code === "Space") spaceDown = false; });
 
 /* =====================================================================
    Top bar: undo/redo/compare/reset
@@ -981,9 +1109,9 @@ const compareOff = () => { if (!state.compare) return; state.compare = false; re
 cmp.addEventListener("pointerdown", compareOn);
 cmp.addEventListener("pointerup", compareOff);
 cmp.addEventListener("pointerleave", compareOff);
-$("#btn-reset").addEventListener("click", () => {
+$("#btn-reset").addEventListener("click", async () => {
   if (!hasImage()) return;
-  if (!confirm("გავაუქმო ყველა ცვლილება და დავბრუნდე ორიგინალზე?")) return;
+  if (!(await askConfirm("გავაუქმო ყველა ცვლილება და დავბრუნდე ორიგინალზე?", "გაუქმება"))) return;
   pushHistory();
   state.base = cloneCanvas(state.original);
   state.mask = mkCanvas(state.base.width, state.base.height);
@@ -1034,12 +1162,12 @@ $("#ex-download").addEventListener("click", async () => {
   const blob = await exportBlob();
   const name = ($("#ex-name").value.trim() || "anuki-photo") + "." + extFor(blob.type);
   downloadBlob(blob, name);
-  toast(`ჩამოიტვირთა · ${fmtBytes(blob.size)}`);
+  showSaveDialog(blob, name);
 });
 async function targetAlbumId() {
   let id = $("#ex-album").value;
   if (id === "__new" || !id) {
-    const name = window.prompt("ახალი ალბომის სახელი:", "ჩემი ფოტოები");
+    const name = await askText("ახალი ალბომის სახელი", "ჩემი ფოტოები", "შექმნა");
     if (name === null) return null;
     const a = await DB.createAlbum(name);
     id = a.id;
@@ -1061,7 +1189,7 @@ $("#ex-save-copy").addEventListener("click", async () => {
 });
 $("#ex-save-over").addEventListener("click", async () => {
   if (!hasImage() || !state.photoId) return;
-  if (!confirm("გადავაწერო ორიგინალ ფოტოს ალბომში?")) return;
+  if (!(await askConfirm("გადავაწერო ორიგინალ ფოტოს ალბომში?", "გადაწერა", false))) return;
   toast("ინახება…");
   const blob = await exportBlob();
   const name = ($("#ex-name").value.trim() || "anuki-photo") + "." + extFor(blob.type);
@@ -1074,6 +1202,7 @@ $("#ex-save-over").addEventListener("click", async () => {
    ===================================================================== */
 (async function init() {
   updateHistoryButtons();
+  if (innerWidth <= 960) panelEl.classList.add("collapsed");
   const id = new URLSearchParams(location.search).get("photo");
   if (id) {
     const p = await DB.getPhoto(id);
